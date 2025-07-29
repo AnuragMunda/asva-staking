@@ -5,7 +5,7 @@ const INFURA_API_KEY = vars.get("INFURA_API_KEY");
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.30",
+    version: "0.8.28",
     settings: {
       optimizer: {
         enabled: true,
