@@ -1,5 +1,7 @@
-import type { HardhatUserConfig } from "hardhat/config";
+import { vars, type HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox-viem";
+
+const INFURA_API_KEY = vars.get("INFURA_API_KEY");
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -15,7 +17,7 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {},
     sepolia: {
-      url: "https://sepolia.infura.io/v3/42412892f1e54e148e2ad6fe865d0f24",
+      url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
     }
   },
   paths: {
