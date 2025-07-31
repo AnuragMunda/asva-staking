@@ -1,6 +1,6 @@
 import './App.css'
-import MainHeader from "../components/main-header.tsx"
-import MainPortfolioCard from "../components/main-portfolio-card.tsx"
+import MainHeader from "./components/main-header.tsx"
+import MainPortfolioCard from "./components/main-portfolio-card.tsx"
 import { useAccount } from 'wagmi'
 
 function App() {

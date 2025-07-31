@@ -1,5 +1,4 @@
-import React from 'react'
-import { useAccount, useReadContract } from 'wagmi'
+import { useAccount, useReadContract, useWatchContractEvent } from 'wagmi'
 import { stakingABI, asvaStakingAddress_sepolia, myTokenABI, myTokenAddress_sepolia } from '../lib/ABI'
 import { formatEther } from 'viem'
 import { DialogCloseButton } from './dialog'
@@ -8,27 +7,27 @@ import { Separator } from '@radix-ui/react-separator'
 const MainPortfolioCard = () => {
     const { address } = useAccount()
 
-    const { data: userStakeBalance } = useReadContract({
+    const { data: userStakeBalance, refetch: refetchUserStakeBalance } = useReadContract({
         abi: stakingABI,
         address: asvaStakingAddress_sepolia,
         functionName: 'getUserStake',
         args: [
             address
         ]
-    }) as { data: bigint }
+    }) as { data: bigint, refetch: () => void }
 
-    const { data: totalStake } = useReadContract({
+    const { data: totalStake, refetch: refetchTotalStake } = useReadContract({
         abi: stakingABI,
         address: asvaStakingAddress_sepolia,
         functionName: 'getTotalStake',
-    }) as { data: bigint }
+    }) as { data: bigint, refetch: () => void }
 
-    const { data: userBalance } = useReadContract({
+    const { data: userBalance, refetch: refetchUserBalance } = useReadContract({
         abi: myTokenABI,
         address: myTokenAddress_sepolia,
         functionName: 'balanceOf',
         args: [address]
-    }) as { data: bigint }
+    }) as { data: bigint, refetch: () => void }
 
     const { data: tokenSymbol } = useReadContract({
         abi: myTokenABI,
@@ -36,6 +35,27 @@ const MainPortfolioCard = () => {
         functionName: 'symbol',
     }) as { data: string }
 
+    useWatchContractEvent({
+        address: asvaStakingAddress_sepolia,
+        abi: stakingABI,
+        eventName: 'Staked',
+        onLogs() {
+            refetchUserStakeBalance()
+            refetchTotalStake()
+            refetchUserBalance()
+        }
+    })
+
+    useWatchContractEvent({
+        address: asvaStakingAddress_sepolia,
+        abi: stakingABI,
+        eventName: 'Unstaked',
+        onLogs() {
+            refetchUserStakeBalance()
+            refetchTotalStake()
+            refetchUserBalance()
+        }
+    })
 
     return (
         <div className='w-[70%] text-lg text-black flex flex-col md:flex-row gap-3'>

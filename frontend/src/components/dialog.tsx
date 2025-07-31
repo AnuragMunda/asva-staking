@@ -7,8 +7,8 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "../src/components/ui/dialog"
-import { Input } from "../src/components/ui/input"
+} from "./ui/dialog"
+import { Input } from "./ui/input"
 import React, { useState } from "react"
 import toast from 'react-hot-toast'
 import { asvaStakingAddress_sepolia, stakingABI, myTokenABI, myTokenAddress_sepolia } from "../lib/ABI"
@@ -61,8 +61,7 @@ export function DialogCloseButton({ children, type }: Props) {
                         ]
                     })
 
-                    const result = await waitForTransactionReceipt(config, { hash })
-                    console.log("---->", result)
+                    await waitForTransactionReceipt(config, { hash })
                     toast.success("Approval done", { id })
                 }
                 id = toast.loading("Processing Stake")

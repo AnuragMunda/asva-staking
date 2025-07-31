@@ -4,7 +4,7 @@ import './index.css'
 import '@rainbow-me/rainbowkit/styles.css';
 import App from './App.tsx'
 import { WagmiProvider } from 'wagmi'
-import { config } from '../lib/wagmiConfig.ts'
+import { config } from './lib/wagmiConfig'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
 import { Toaster } from 'react-hot-toast'
