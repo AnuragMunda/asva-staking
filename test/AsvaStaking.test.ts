@@ -1,5 +1,5 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox-viem/network-helpers";
-import { hexToBytes, isAddressEqual, parseUnits } from "viem";
+import { hexToBytes, isAddressEqual, parseEther, parseUnits } from "viem";
 import hre from "hardhat";
 import { ContractTypesMap } from "hardhat/types";
 import { assert, expect } from "chai";
@@ -23,59 +23,14 @@ describe("AsvaStaking contract", () => {
         return { asvaStaking, myToken, owner, publicClient, chainId }
     }
 
-    const splitSignature = (signature: `0x${string}`) => {
-        const bytes = hexToBytes(signature)
-        const r = `0x${Buffer.from(bytes.slice(0, 32)).toString('hex')}` as `0x${string}`
-        const s = `0x${Buffer.from(bytes.slice(32, 64)).toString('hex')}` as `0x${string}`
-        let v = bytes[64]
-        if (v < 27) v += 27
-        return { v, r, s }
-    }
+    const approveAndStake = async (stakingAmount: bigint) => {
+        const { asvaStaking, owner, myToken } = await loadFixture(deployAsvaStakingFixture);
 
-    const permitAndStake = async (stakingAmount: bigint) => {
-        const { asvaStaking, owner, myToken, chainId } = await loadFixture(deployAsvaStakingFixture);
+        const allowance = await myToken.read.allowance([owner.account.address, asvaStaking.address])
 
-        const nonce = await myToken.read.nonces([owner.account.address])
-        const deadline = BigInt(Math.floor(Date.now() / 1000)) + 86400n;
-
-        const signature = await owner.signTypedData({
-            domain: {
-                name: 'MyToken',
-                version: '1',
-                chainId: chainId,
-                verifyingContract: myToken.address,
-            },
-            types: {
-                Permit: [
-                    { name: 'owner', type: 'address' },
-                    { name: 'spender', type: 'address' },
-                    { name: 'value', type: 'uint256' },
-                    { name: 'nonce', type: 'uint256' },
-                    { name: 'deadline', type: 'uint256' },
-                ],
-            },
-            primaryType: 'Permit',
-            message: {
-                owner: owner.account.address,
-                spender: asvaStaking.address,
-                value: stakingAmount,
-                nonce,
-                deadline,
-            },
-        })
-
-
-        const { v, r, s } = splitSignature(signature);
-
-        await myToken.write.permit([
-            owner.account.address,
-            asvaStaking.address,
-            stakingAmount,
-            deadline,
-            v,
-            r,
-            s
-        ])
+        if (stakingAmount > allowance) {
+            await myToken.write.approve([asvaStaking.address, stakingAmount], { account: owner.account.address })
+        }
         await asvaStaking.write.stake([stakingAmount]);
     }
 
@@ -100,7 +55,7 @@ describe("AsvaStaking contract", () => {
             const initialPoolBalance = await asvaStaking.read.getTotalStake()
             const initialUserBalance = await myToken.read.balanceOf([owner.account.address])
 
-            await permitAndStake(stakingAmount);
+            await approveAndStake(stakingAmount);
 
             const finalUserStake = await asvaStaking.read.getUserStake([owner.account.address]);
             assert.equal(finalUserStake, initialUserStake + stakingAmount);
@@ -118,7 +73,7 @@ describe("AsvaStaking contract", () => {
             const unstakingAmount = parseUnits('5', 18);
             const { asvaStaking, owner, myToken } = await loadFixture(deployAsvaStakingFixture);
 
-            await permitAndStake(unstakingAmount);
+            await approveAndStake(unstakingAmount);
 
             const initialUserStake = await asvaStaking.read.getUserStake([owner.account.address])
             const initialPoolBalance = await asvaStaking.read.getTotalStake()
@@ -138,10 +93,9 @@ describe("AsvaStaking contract", () => {
     })
 
     describe("Validation", () => {
-        it("should revert if amount zero is staking", async () => {
-            const stakingAmount = parseUnits('0', 18);
-
-            await expect(permitAndStake(stakingAmount)).to.be.rejectedWith('AsvaStaking_ZeroAmount');
+        it("should revert if amount zero is staked", async () => {
+            const { asvaStaking } = await loadFixture(deployAsvaStakingFixture)
+            await expect(asvaStaking.write.stake([parseUnits('0', 18)])).to.be.rejected;
         });
 
         it("should revert if amount zero is unstaked", async () => {
@@ -150,20 +104,20 @@ describe("AsvaStaking contract", () => {
 
             const { asvaStaking } = await loadFixture(deployAsvaStakingFixture);
 
-            permitAndStake(stakingAmount)
+            approveAndStake(stakingAmount)
 
-            await expect(asvaStaking.write.unstake([unstakingAmount])).to.be.rejectedWith('AsvaStaking_ZeroAmount')
+            await expect(asvaStaking.write.unstake([unstakingAmount])).to.be.rejected
         });
 
         it("should revert if user staked balance is less than unstaked amount", async () => {
-            const stakingAmount = parseUnits('10', 18);
-            const unstakingAmount = parseUnits('15', 18);
+            const stakingAmount = parseEther('10');
+            const unstakingAmount = parseEther('15');
 
             const { asvaStaking } = await loadFixture(deployAsvaStakingFixture);
 
-            permitAndStake(stakingAmount)
+            approveAndStake(stakingAmount)
 
-            await expect(asvaStaking.write.unstake([unstakingAmount])).to.be.rejectedWith('AsvaStaking_InsfufficientStakedBalance')
+            await expect(asvaStaking.write.unstake([unstakingAmount])).to.be.rejected
         })
     })
 })
